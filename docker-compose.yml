@@ -1,77 +1,55 @@
 version: '3.8'
 
 services:
-  # -------------------------------------------
-  # 1. Servicio de la Aplicación (PHP/Nginx)
-  # -------------------------------------------
+
   app:
-    # Construir la imagen usando el Dockerfile en el directorio actual
     build:
       context: .
       dockerfile: Dockerfile
-      # Argumento para pasar el ID de usuario, útil para consistencia en el volumen
       args:
         UID: ${UID:-1000}
-    
-    # Nombre del contenedor para fácil referencia
+
     container_name: laravel_app
-    
-    # Mapeo de puertos: 8080 del host al puerto 80 del contenedor Nginx
+
     ports:
       - "8080:80"
-    
-    # Volumen para desarrollo: mapea el código del host al contenedor.
-    # Comentar en producción si el código ya está en la imagen.
+
     volumes:
       - .:/var/www
-      # Asegura que el contenedor pueda escribir en estos directorios
       - ./storage:/var/www/storage
       - ./bootstrap/cache:/var/www/bootstrap/cache
-    
-    # Variables de entorno para la conexión a la base de datos
+
     environment:
-      # Usamos el nombre del servicio 'db' como el host de la DB
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-laravel}
-      DB_USERNAME: ${DB_USERNAME:-sail}
-      DB_PASSWORD: ${DB_PASSWORD:-password}
-      # Conexión Redis
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: heladeria
+      DB_USERNAME: heladeria
+      DB_PASSWORD: secret
+
       REDIS_HOST: redis
-    
-    # Dependencias: app no arrancará hasta que db y redis estén listos
+
     depends_on:
-      - db
+      - postgres
       - redis
-    
-    # Reiniciar si falla
+
     restart: always
 
-  # -------------------------------------------
-  # 2. Servicio de la Base de Datos (MySQL 8)
-  # -------------------------------------------
-  db:
-    image: mysql:8.0
-    container_name: laravel_db
-    # Mapeo de puerto (opcional, solo para acceder desde el host)
+
+  postgres:
+    image: postgres:15
+    container_name: laravel_postgres
     ports:
-      - "33060:3306"
-    
+      - "5432:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-password}
-      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
-      MYSQL_USER: ${DB_USERNAME:-sail}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
-    
-    # Volumen persistente para la data de la base de datos
+      POSTGRES_DB: heladeria_3pue
+      POSTGRES_USER: heladeria
+      POSTGRES_PASSWORD: gyRCxyHzNtYiTXQxIa6cZKwCxIqRyyJV
     volumes:
-      - db_data:/var/lib/mysql
-      
+      - pg_data:/var/lib/postgresql/data
     restart: always
 
-  # -------------------------------------------
-  # 3. Servicio de Caché (Redis)
-  # -------------------------------------------
+
   redis:
     image: redis:alpine
     container_name: laravel_redis
@@ -79,9 +57,7 @@ services:
       - "63790:6379"
     restart: always
 
-# -------------------------------------------
-# Definición de Volúmenes Persistentes
-# -------------------------------------------
+
 volumes:
-  db_data:
-    driver: local
+  pg_data:
+    driver:local
